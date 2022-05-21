@@ -5,11 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Bachelor.ViewModels"
         xmlns:local="clr-namespace:Bachelor"       
-        Title="{Binding Title}" Height="450" Width="800">
+        Title="{Binding Title}"
+        DataContext="{Binding MainWindowModel, Source={StaticResource Locator}}"
+        Height="450" Width="800">
     <Grid>
 
     </Grid>
-    <Window.DataContext>
+    <!--<Window.DataContext>
         <vm:MainWindowViewModel/>
-    </Window.DataContext>
+    </Window.DataContext>-->
 </Window>
