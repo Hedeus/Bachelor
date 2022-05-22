@@ -13,12 +13,16 @@ namespace Bachelor
     public partial class App
     {
         public static Window FocusedWindow => Current.Windows.Cast<Window>().FirstOrDefault(w => w.IsFocused);
+
         public static Window ActiveWindow => Current.Windows.Cast<Window>().FirstOrDefault(w => w.IsActive);
+
         public static bool IsDesignMode { get; private set; } = true;
+
         private static IHost __Host;
         public static IHost Host => __Host ??= Program.CreateHostBuilder(Environment.GetCommandLineArgs()).Build();
 
         public static IServiceProvider Services => Host.Services;
+
         protected override async void OnStartup(StartupEventArgs e)
         {
             IsDesignMode = false;
