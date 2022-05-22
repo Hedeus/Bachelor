@@ -1,7 +1,10 @@
 ﻿using Bachelor.Services.Interfaces;
+using Bachelor.Views.Windows;
 using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Windows;
 
 namespace Bachelor.Services
@@ -69,5 +72,12 @@ namespace Bachelor.Services
         public void Warning(string Title, string Message) => MessageBox.Show(Message, Title, MessageBoxButton.OK, MessageBoxImage.Warning);
 
         public void Error(string Title, string Message) => MessageBox.Show(Message, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+
+        public (IProgress<double> Progress, IProgress<string> Status, CancellationToken Cancel, Action Close) ShowProgress(string Title)
+        {
+            var progress_window = new ProgressWindow { Title = Title, Owner = App.FocusedWindow, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            progress_window.Show();
+            return (progress_window.ProgressInformer, progress_window.StatusInformer, progress_window.Cancel, progress_window.Close);
+        }
     }
 }

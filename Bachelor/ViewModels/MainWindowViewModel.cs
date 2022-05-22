@@ -86,13 +86,19 @@ namespace Bachelor.ViewModels
             var progress = new Progress<double>(percent => ProgressValue = percent);
 
             _ProcessCancellation = new CancellationTokenSource();
+            var cancel = _ProcessCancellation.Token;
+
+            var (progress_info, status_info, operation_cancel, close_window) = _UserDialog.ShowProgress("Шифрование");
+            status_info.Report($"Шифрование файла {file.Name}");
+
+            var combyne_cancellation =CancellationTokenSource.CreateLinkedTokenSource(cancel, operation_cancel);
 
             ((Command)EncrypCommand).Executable = false;
             ((Command)DecrypCommand).Executable = false;
 
             try
             {
-                await _Encryptor.EncryptAsync(file.FullName, destination_path, Password, Progress: progress, Cancel: _ProcessCancellation.Token);
+                await _Encryptor.EncryptAsync(file.FullName, destination_path, Password, Progress: progress_info, Cancel: combyne_cancellation.Token);
             }
             catch (OperationCanceledException)
             {
@@ -102,6 +108,7 @@ namespace Bachelor.ViewModels
             {
                 _ProcessCancellation.Dispose();
                 _ProcessCancellation = null;
+                close_window();
             }
 
             ((Command)EncrypCommand).Executable = true;
@@ -133,17 +140,23 @@ namespace Bachelor.ViewModels
             var timer = Stopwatch.StartNew();
 
             _ProcessCancellation = new CancellationTokenSource();
+            var cancel = _ProcessCancellation.Token;
+
+            var (progress_info, status_info, operation_cancel, close_window) = _UserDialog.ShowProgress("Дешифрование");
+            status_info.Report($"Шифрование файла {file.Name}");
+
+            var combyne_cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancel, operation_cancel);
 
             ((Command)EncrypCommand).Executable = false;
             ((Command)DecrypCommand).Executable = false;
-            var decryption_task = _Encryptor.DecryptAsync(file.FullName, destination_path, Password, Progress: progress, Cancel: _ProcessCancellation.Token);
+            var decryption_task = _Encryptor.DecryptAsync(file.FullName, destination_path, Password, Progress: progress_info, Cancel: combyne_cancellation.Token);
 
             bool success = false;
             try
             {
                 success = await decryption_task;
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException e) when (e.CancellationToken == combyne_cancellation.Token)
             {
 
                 //throw;
@@ -152,6 +165,7 @@ namespace Bachelor.ViewModels
             {
                 _ProcessCancellation.Dispose();
                 _ProcessCancellation = null;
+                close_window();
             }
 
             ((Command)EncrypCommand).Executable = true;
