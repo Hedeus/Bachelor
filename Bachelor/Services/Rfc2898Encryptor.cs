@@ -132,7 +132,7 @@ namespace Bachelor.Services
                 destination.FlushFinalBlock();
                 Progress?.Report(1);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException e) when (e.CancellationToken == Cancel)
             {
                 File.Delete(DestinationPath);
                 Progress?.Report(0);
@@ -203,7 +203,7 @@ namespace Bachelor.Services
                 }
                 Progress?.Report(1);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException e) when (e.CancellationToken == Cancel)
             {
                 File.Delete(DestinationPath);
                 Progress?.Report(0);
