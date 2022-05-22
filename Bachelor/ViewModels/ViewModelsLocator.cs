@@ -4,7 +4,7 @@ namespace Bachelor.ViewModels
 {
     internal class ViewModelsLocator
     {
-        public MainWindowViewModel MainWindowModel => App.Host.Services.GetRequiredService<MainWindowViewModel>();
+        public MainWindowViewModel MainWindowModel => App.Services.GetRequiredService<MainWindowViewModel>();
 
 
     }
