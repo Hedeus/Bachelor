@@ -1,6 +1,7 @@
 ﻿using Bachelor.Infrastructure.Commands.Base;
 using Bachelor.Services.Interfaces;
 using Bachelor.ViewModels.Base;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Input;
 using System.Windows.Markup;
@@ -13,7 +14,10 @@ namespace Bachelor.ViewModels
         /*---------------------------------------------Properies------------------------------------------------*/
         #region Свойства
 
+        private const string __EncryptedFileSuffix = ".encrypted";
+
         private readonly IUserDialog _UserDialog;
+        private readonly IEncryptor _Encryptor;
 
         #region Title : string - Заголовок вікна
         private string _Title = "Бакалаврська робота";
@@ -62,6 +66,15 @@ namespace Bachelor.ViewModels
         {
             var file = p as FileInfo ?? SelectedFile;
             if (file is null) return;
+
+            var default_file_name = file.FullName + __EncryptedFileSuffix;
+            if (!_UserDialog.SaveFile("Выбор файла для сохранения", out var destination_path, default_file_name)) return;
+
+            var timer = Stopwatch.StartNew();
+            _Encryptor.Encrypt(file.FullName, destination_path, Password);
+            timer.Stop();
+
+            _UserDialog.Information("Шифрование", $"Шифрование файла успешно завершено за {timer.Elapsed.TotalSeconds:0.##} с");
         }
 
         private ICommand _DecrypCommand;
@@ -73,13 +86,28 @@ namespace Bachelor.ViewModels
         {
             var file = p as FileInfo ?? SelectedFile;
             if (file is null) return;
+
+            var default_file_name = file.FullName.EndsWith(__EncryptedFileSuffix)
+                ? file.FullName.Substring(0, file.FullName.Length - __EncryptedFileSuffix.Length)
+                : file.FullName;
+            if (!_UserDialog.SaveFile("Выбор файла для сохранения", out var destination_path, default_file_name)) return;
+
+            var timer = Stopwatch.StartNew();
+            var success = _Encryptor.Decrypt(file.FullName, destination_path, Password);
+            timer.Stop();
+
+            if (success)
+                _UserDialog.Information("Шифрование",  $"Дешифровка файла выполнена успешно за {timer.Elapsed.TotalSeconds:0.##} с");
+            else
+                _UserDialog.Warning("Шифрование", "Ошибка при дешифровке файла: указан неверный пароль");
         }
 
         #endregion
 
-        public MainWindowViewModel(IUserDialog UserDialog)
+        public MainWindowViewModel(IUserDialog UserDialog, IEncryptor Encryptor)
         {
             _UserDialog = UserDialog;
+            _Encryptor = Encryptor;
         }
 
     }
