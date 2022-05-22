@@ -32,7 +32,7 @@ namespace Bachelor.ViewModels
 
         #region SelectedFile : FileInfo - Выбранный файл
         private FileInfo _SelectedFile;
-        public FileInfo SelectedFile { get => _SelectedFile; set => Set(ref _SelectedFile, value); } 
+        public FileInfo SelectedFile { get => _SelectedFile; set => Set(ref _SelectedFile, value); }
         #endregion
 
         #endregion
@@ -41,6 +41,7 @@ namespace Bachelor.ViewModels
 
         #region Команды
 
+        #region SelectedFileCommand - команда выбора файла
         private ICommand _SelectedFileCommand;
         public ICommand SelectedFileCommand => _SelectedFileCommand ??= new LambdaCommand(OnSelectedFileCommandExecuted);
 
@@ -49,6 +50,29 @@ namespace Bachelor.ViewModels
             if (!_UserDialog.OpenFile("Выбор файла для шифрования", out var file_path)) return;
             var selected_file = new FileInfo(file_path);
             SelectedFile = selected_file.Exists ? selected_file : null;
+        }
+        #endregion
+
+        private ICommand _EncrypCommand;
+        public ICommand EncrypCommand => _EncrypCommand ??= new LambdaCommand(OnEncrypCommandExecuted, CanEncrypCommandExecute);
+
+        private bool CanEncrypCommandExecute(object p) => (p is FileInfo file && file.Exists || SelectedFile != null) && !string.IsNullOrWhiteSpace(Password);
+
+        private void OnEncrypCommandExecuted(object p)
+        {
+            var file = p as FileInfo ?? SelectedFile;
+            if (file is null) return;
+        }
+
+        private ICommand _DecrypCommand;
+        public ICommand DecrypCommand => _DecrypCommand ??= new LambdaCommand(OnDecrypCommandExecuted, CanDecrypCommandExecute);
+
+        private bool CanDecrypCommandExecute(object p) => (p is FileInfo file && file.Exists || SelectedFile != null) && !string.IsNullOrWhiteSpace(Password);
+
+        private void OnDecrypCommandExecuted(object p)
+        {
+            var file = p as FileInfo ?? SelectedFile;
+            if (file is null) return;
         }
 
         #endregion
