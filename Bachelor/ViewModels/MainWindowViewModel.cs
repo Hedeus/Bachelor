@@ -4,6 +4,7 @@ using Bachelor.ViewModels.Base;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Windows.Input;
 using System.Windows.Markup;
 
@@ -19,6 +20,14 @@ namespace Bachelor.ViewModels
 
         private readonly IUserDialog _UserDialog;
         private readonly IEncryptor _Encryptor;
+
+        private CancellationTokenSource _ProcessCancellation;
+
+        #region ProgressValue : double - Значение прогресса
+        private double _ProgressValue = 0.0;
+
+        public double ProgressValue { get => _ProgressValue; set => Set(ref _ProgressValue, value); } 
+        #endregion
 
         #region Title : string - Заголовок вікна
         private string _Title = "Бакалаврська робота";
@@ -58,6 +67,7 @@ namespace Bachelor.ViewModels
         }
         #endregion
 
+        #region EncrypCommand - Команда шифрования файла
         private ICommand _EncrypCommand;
         public ICommand EncrypCommand => _EncrypCommand ??= new LambdaCommand(OnEncrypCommandExecuted, CanEncrypCommandExecute);
 
@@ -71,26 +81,38 @@ namespace Bachelor.ViewModels
             var default_file_name = file.FullName + __EncryptedFileSuffix;
             if (!_UserDialog.SaveFile("Выбор файла для сохранения", out var destination_path, default_file_name)) return;
 
-            var timer = Stopwatch.StartNew();            
+            var timer = Stopwatch.StartNew();
+
+            var progress = new Progress<double>(percent => ProgressValue = percent);
+
+            _ProcessCancellation = new CancellationTokenSource();
+
             ((Command)EncrypCommand).Executable = false;
-            ((Command)DecrypCommand).Executable = false;  
-           
+            ((Command)DecrypCommand).Executable = false;
+
             try
             {
-                await _Encryptor.EncryptAsync(file.FullName, destination_path, Password);
+                await _Encryptor.EncryptAsync(file.FullName, destination_path, Password, Progress: progress, Cancel: _ProcessCancellation.Token);
             }
             catch (OperationCanceledException)
             {
                 //throw;
+            }
+            finally
+            {
+                _ProcessCancellation.Dispose();
+                _ProcessCancellation = null;
             }
 
             ((Command)EncrypCommand).Executable = true;
             ((Command)DecrypCommand).Executable = true;
             timer.Stop();
 
-            _UserDialog.Information("Шифрование", $"Шифрование файла успешно завершено за {timer.Elapsed.TotalSeconds:0.##} с");
+            //_UserDialog.Information("Шифрование", $"Шифрование файла успешно завершено за {timer.Elapsed.TotalSeconds:0.##} с");
         }
+        #endregion
 
+        #region DecrypCommand - Команда расшифровки файла
         private ICommand _DecrypCommand;
         public ICommand DecrypCommand => _DecrypCommand ??= new LambdaCommand(OnDecrypCommandExecuted, CanDecrypCommandExecute);
 
@@ -106,10 +128,15 @@ namespace Bachelor.ViewModels
                 : file.FullName;
             if (!_UserDialog.SaveFile("Выбор файла для сохранения", out var destination_path, default_file_name)) return;
 
+            var progress = new Progress<double>(percent => ProgressValue = percent);
+
             var timer = Stopwatch.StartNew();
+
+            _ProcessCancellation = new CancellationTokenSource();
+
             ((Command)EncrypCommand).Executable = false;
             ((Command)DecrypCommand).Executable = false;
-            var decryption_task = _Encryptor.DecryptAsync(file.FullName, destination_path, Password);
+            var decryption_task = _Encryptor.DecryptAsync(file.FullName, destination_path, Password, Progress: progress, Cancel: _ProcessCancellation.Token);
 
             bool success = false;
             try
@@ -121,16 +148,32 @@ namespace Bachelor.ViewModels
 
                 //throw;
             }
+            finally
+            {
+                _ProcessCancellation.Dispose();
+                _ProcessCancellation = null;
+            }
 
             ((Command)EncrypCommand).Executable = true;
             ((Command)DecrypCommand).Executable = true;
             timer.Stop();
 
-            if (success)
-                _UserDialog.Information("Шифрование",  $"Дешифровка файла выполнена успешно за {timer.Elapsed.TotalSeconds:0.##} с");
-            else
+            //if (success)
+            //    _UserDialog.Information("Шифрование",  $"Дешифровка файла выполнена успешно за {timer.Elapsed.TotalSeconds:0.##} с");
+            //else
+            //    _UserDialog.Warning("Шифрование", "Ошибка при дешифровке файла: указан неверный пароль");
+            if (!success)
                 _UserDialog.Warning("Шифрование", "Ошибка при дешифровке файла: указан неверный пароль");
         }
+        #endregion
+
+        private ICommand _CancelCommand;
+
+        public ICommand CancelCommand => _CancelCommand ??= new LambdaCommand(OnCancelCommandExecuted, CanCancelCommandExecute);
+
+        private bool CanCancelCommandExecute() => _ProcessCancellation != null && !_ProcessCancellation.IsCancellationRequested;
+
+        private void OnCancelCommandExecuted() => _ProcessCancellation.Cancel();
 
         #endregion
 
