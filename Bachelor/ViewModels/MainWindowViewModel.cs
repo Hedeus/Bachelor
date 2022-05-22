@@ -1,6 +1,7 @@
 ﻿using Bachelor.Infrastructure.Commands.Base;
 using Bachelor.Services.Interfaces;
 using Bachelor.ViewModels.Base;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Input;
@@ -70,13 +71,21 @@ namespace Bachelor.ViewModels
             var default_file_name = file.FullName + __EncryptedFileSuffix;
             if (!_UserDialog.SaveFile("Выбор файла для сохранения", out var destination_path, default_file_name)) return;
 
-            var timer = Stopwatch.StartNew();
-            //_Encryptor.Encrypt(file.FullName, destination_path, Password);
+            var timer = Stopwatch.StartNew();            
             ((Command)EncrypCommand).Executable = false;
-            var encryption_task = _Encryptor.EncryptAsync(file.FullName, destination_path, Password);
+            ((Command)DecrypCommand).Executable = false;  
+           
+            try
+            {
+                await _Encryptor.EncryptAsync(file.FullName, destination_path, Password);
+            }
+            catch (OperationCanceledException)
+            {
+                //throw;
+            }
 
-            await encryption_task;
             ((Command)EncrypCommand).Executable = true;
+            ((Command)DecrypCommand).Executable = true;
             timer.Stop();
 
             _UserDialog.Information("Шифрование", $"Шифрование файла успешно завершено за {timer.Elapsed.TotalSeconds:0.##} с");
@@ -98,10 +107,22 @@ namespace Bachelor.ViewModels
             if (!_UserDialog.SaveFile("Выбор файла для сохранения", out var destination_path, default_file_name)) return;
 
             var timer = Stopwatch.StartNew();
+            ((Command)EncrypCommand).Executable = false;
             ((Command)DecrypCommand).Executable = false;
             var decryption_task = _Encryptor.DecryptAsync(file.FullName, destination_path, Password);
 
-            var success = await decryption_task;
+            bool success = false;
+            try
+            {
+                success = await decryption_task;
+            }
+            catch (OperationCanceledException)
+            {
+
+                //throw;
+            }
+
+            ((Command)EncrypCommand).Executable = true;
             ((Command)DecrypCommand).Executable = true;
             timer.Stop();
 
