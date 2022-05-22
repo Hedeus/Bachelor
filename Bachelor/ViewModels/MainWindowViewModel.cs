@@ -62,7 +62,7 @@ namespace Bachelor.ViewModels
 
         private bool CanEncrypCommandExecute(object p) => (p is FileInfo file && file.Exists || SelectedFile != null) && !string.IsNullOrWhiteSpace(Password);
 
-        private void OnEncrypCommandExecuted(object p)
+        private async void OnEncrypCommandExecuted(object p)
         {
             var file = p as FileInfo ?? SelectedFile;
             if (file is null) return;
@@ -71,7 +71,12 @@ namespace Bachelor.ViewModels
             if (!_UserDialog.SaveFile("Выбор файла для сохранения", out var destination_path, default_file_name)) return;
 
             var timer = Stopwatch.StartNew();
-            _Encryptor.Encrypt(file.FullName, destination_path, Password);
+            //_Encryptor.Encrypt(file.FullName, destination_path, Password);
+            ((Command)EncrypCommand).Executable = false;
+            var encryption_task = _Encryptor.EncryptAsync(file.FullName, destination_path, Password);
+
+            await encryption_task;
+            ((Command)EncrypCommand).Executable = true;
             timer.Stop();
 
             _UserDialog.Information("Шифрование", $"Шифрование файла успешно завершено за {timer.Elapsed.TotalSeconds:0.##} с");
@@ -82,7 +87,7 @@ namespace Bachelor.ViewModels
 
         private bool CanDecrypCommandExecute(object p) => (p is FileInfo file && file.Exists || SelectedFile != null) && !string.IsNullOrWhiteSpace(Password);
 
-        private void OnDecrypCommandExecuted(object p)
+        private async void OnDecrypCommandExecuted(object p)
         {
             var file = p as FileInfo ?? SelectedFile;
             if (file is null) return;
@@ -93,7 +98,11 @@ namespace Bachelor.ViewModels
             if (!_UserDialog.SaveFile("Выбор файла для сохранения", out var destination_path, default_file_name)) return;
 
             var timer = Stopwatch.StartNew();
-            var success = _Encryptor.Decrypt(file.FullName, destination_path, Password);
+            ((Command)DecrypCommand).Executable = false;
+            var decryption_task = _Encryptor.DecryptAsync(file.FullName, destination_path, Password);
+
+            var success = await decryption_task;
+            ((Command)DecrypCommand).Executable = true;
             timer.Stop();
 
             if (success)
